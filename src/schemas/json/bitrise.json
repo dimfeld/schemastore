@@ -14,6 +14,9 @@
         "description": {
           "type": "string"
         },
+        "status_report_name": {
+          "$ref": "#/definitions/StatusReportNameModel"
+        },
         "envs": {
           "$ref": "#/definitions/EnvModel"
         }
@@ -43,9 +46,9 @@
       "type": "object"
     },
     "BitriseDataModel": {
-      "oneOf": [
+      "anyOf": [
         { "required": ["format_version"] },
-        { "required": ["includes"] }
+        { "required": ["include"] }
       ],
       "properties": {
         "format_version": {
@@ -131,7 +134,7 @@
           },
           "type": "object"
         },
-        "includes": {
+        "include": {
           "items": {
             "$ref": "#/definitions/IncludeItemModel"
           },
@@ -262,6 +265,9 @@
         "triggers": {
           "$ref": "#/definitions/TriggersModel"
         },
+        "status_report_name": {
+          "$ref": "#/definitions/StatusReportNameModel"
+        },
         "stages": {
           "items": {
             "patternProperties": {
@@ -272,6 +278,58 @@
             "type": "object"
           },
           "type": "array"
+        },
+        "workflows": {
+          "patternProperties": {
+            ".*": {
+              "$ref": "#/definitions/GraphPipelineWorkflowModel"
+            }
+          },
+          "type": "object"
+        },
+        "priority": {
+          "$ref": "#/definitions/PriorityModel"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "GraphPipelineWorkflowModel": {
+      "properties": {
+        "depends_on": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "abort_on_fail": {
+          "type": "boolean"
+        },
+        "should_always_run": {
+          "type": "string",
+          "enum": ["off", "workflow"]
+        },
+        "run_if": {
+          "$ref": "#/definitions/GraphPipelineWorkflowRunIfModel"
+        },
+        "parallel": {
+          "oneOf": [{ "type": "integer" }, { "type": "string" }]
+        },
+        "uses": {
+          "type": "string"
+        },
+        "inputs": {
+          "$ref": "#/definitions/EnvModel"
+        }
+      },
+      "additionalProperties": false,
+      "type": "object"
+    },
+    "GraphPipelineWorkflowRunIfModel": {
+      "required": ["expression"],
+      "properties": {
+        "expression": {
+          "type": "string"
         }
       },
       "additionalProperties": false,
@@ -308,6 +366,12 @@
       },
       "additionalProperties": false,
       "type": "object"
+    },
+    "StatusReportNameModel": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "^[a-zA-Z0-9,./():\\-_ <>\\[\\]\\|]*$"
     },
     "StepModel": {
       "properties": {
@@ -436,6 +500,9 @@
         "enabled": {
           "type": "boolean"
         },
+        "priority": {
+          "$ref": "#/definitions/PriorityModel"
+        },
         "branch": {
           "oneOf": [
             { "$ref": "#/definitions/TriggerMapItemModelRegexCondition" },
@@ -462,6 +529,9 @@
       "properties": {
         "enabled": {
           "type": "boolean"
+        },
+        "priority": {
+          "$ref": "#/definitions/PriorityModel"
         },
         "draft_enabled": {
           "type": "boolean"
@@ -510,6 +580,9 @@
       "properties": {
         "enabled": {
           "type": "boolean"
+        },
+        "priority": {
+          "$ref": "#/definitions/PriorityModel"
         },
         "name": {
           "oneOf": [
@@ -649,10 +722,11 @@
         "steps": {
           "items": {
             "patternProperties": {
-              ".*": {
+              "^(?!bundle::)(?!with$).*": {
                 "$ref": "#/definitions/StepModel"
               }
             },
+            "additionalProperties": false,
             "type": "object"
           },
           "type": "array"
@@ -684,6 +758,9 @@
         "triggers": {
           "$ref": "#/definitions/TriggersModel"
         },
+        "status_report_name": {
+          "$ref": "#/definitions/StatusReportNameModel"
+        },
         "before_run": {
           "items": {
             "type": "string"
@@ -708,13 +785,17 @@
               "^with$": {
                 "$ref": "#/definitions/WithModel"
               },
-              ".*": {
+              "^(?!bundle::)(?!with$).*": {
                 "$ref": "#/definitions/StepModel"
               }
             },
+            "additionalProperties": false,
             "type": "object"
           },
           "type": "array"
+        },
+        "priority": {
+          "$ref": "#/definitions/PriorityModel"
         },
         "meta": {
           "patternProperties": {
@@ -730,16 +811,32 @@
     },
     "StepBundleModel": {
       "properties": {
+        "title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
         "envs": {
+          "$ref": "#/definitions/EnvModel"
+        },
+        "inputs": {
           "$ref": "#/definitions/EnvModel"
         },
         "steps": {
           "items": {
             "patternProperties": {
-              ".*": {
+              "^bundle::.+": {
+                "$ref": "#/definitions/StepBundleOverrideModel"
+              },
+              "^(?!bundle::)(?!with$).*": {
                 "$ref": "#/definitions/StepModel"
               }
             },
+            "additionalProperties": false,
             "type": "object"
           },
           "type": "array"
@@ -750,7 +847,19 @@
     },
     "StepBundleOverrideModel": {
       "properties": {
+        "title": {
+          "type": "string"
+        },
+        "summary": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
         "envs": {
+          "$ref": "#/definitions/EnvModel"
+        },
+        "inputs": {
           "$ref": "#/definitions/EnvModel"
         }
       },
@@ -779,6 +888,11 @@
       },
       "additionalProperties": false,
       "type": "object"
+    },
+    "PriorityModel": {
+      "type": "integer",
+      "maximum": 100,
+      "minimum": -100
     }
   }
 }
